@@ -8,8 +8,10 @@
 #include <iomanip>
 #include <mutex>
 
+
 #include "OrderBook.h"
 #include "ViewModel.h"
+#include "ThreadSafeQueue.h"
 #include "ftxui/component/screen_interactive.hpp"
 #include "ftxui/component/component.hpp"
 #include "ftxui/dom/elements.hpp"
@@ -46,8 +48,9 @@ int main(int argc, char* argv[]) {
     // ftxui setup
     auto&& screen = ftxui::ScreenInteractive::FitComponent();
 
-    ViewModel shared_view_model;
-    std::mutex view_model_mutex;
+    //a threadsafe queue to store viewmodel snapshots.
+    ThreadSafeQueue<ViewModel> ui_queue;
+
     bool simulation_running = true;
 
     
@@ -104,16 +107,23 @@ int main(int argc, char* argv[]) {
 
 
             //ui update sampling - throttled to balance responsive with perfomance so simulation wont be slowed down
+            // line_count++;
+            // if (line_count % 20 == 0) { //rerender the ui only every x lines(line_count % 50 == 0). ftxui have some issue when rendering tables in high frequency. but matching engine will do its work as simulaiton time(ns).
+            //     ViewModel snapshot = order_book.get_view_model(10); //get 10 price levels data
+
+            //     {
+            //         std::lock_guard<std::mutex> lock(view_model_mutex);
+            //         shared_view_model = snapshot;
+            //     }
+
+            //     screen.PostEvent(ftxui::Event::Custom);
+            // }
+
             line_count++;
-            if (line_count % 20 == 0) { //rerender the ui only every x lines(line_count % 50 == 0). ftxui have some issue when rendering tables in high frequency. but matching engine will do its work as simulaiton time(ns).
-                ViewModel snapshot = order_book.get_view_model(10); //get 10 price levels data
-
-                {
-                    std::lock_guard<std::mutex> lock(view_model_mutex);
-                    shared_view_model = snapshot;
-                }
-
-                screen.PostEvent(ftxui::Event::Custom);
+            if (line_count % 100 == 0) { // play around this with to get smooth ui
+                ViewModel snapshot = order_book.get_view_model(10);
+                ui_queue.push(snapshot);
+                screen.PostEvent(ftxui::Event::Custom); // wakeup the ui thread
             }
         }
 
@@ -124,20 +134,17 @@ int main(int argc, char* argv[]) {
 
 
     //ui rendering - the renderer capture viewmodel by reference (Main thread)
+    ViewModel ui_state;
     auto renderer = ftxui::Renderer([&] {
-        ViewModel local_vm_for_rendering;
-        {
-            std::lock_guard<std::mutex> lock(view_model_mutex);
-
-            local_vm_for_rendering = shared_view_model;
+        ViewModel latest_update;
+        while(ui_queue.try_pop(latest_update)) {
+            ui_state = latest_update; //overwrite with new state
         }
-        return CreatUI(local_vm_for_rendering);
-
+        return CreatUI(ui_state);
     });
     
 
     screen.Loop(renderer);
-
     simulaiton_thread.join();
     std::cout << "Simulaiton finished." << std::endl;
 
@@ -199,7 +206,7 @@ ftxui::Element CreatUI(const ViewModel& vm) {
     //header info
     std::stringstream ss_header;
     ss_header << "Ticker: " << vm.ticker << " | Sim Time: " << vm.formatted_time
-              << " | Mid-Price: " << ((vm.mid_price > 0.0) ? std::to_string(vm.mid_price) : "N/A") << " | Spread: " << vm.spread;
+              << " | Mid-Price: " << ((vm.mid_price > 0.0) ? std::to_string(vm.mid_price) : "N/A");
 
     return ftxui::vbox({
         ftxui::text(ss_header.str()) | ftxui::bold | ftxui::center,
