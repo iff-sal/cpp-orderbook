@@ -75,8 +75,7 @@ The project uses a standard CMake workflow.
 git clone <your-repo-url>
 cd <your-repo-directory>
 
-# (If using git submodules for FTXUI)
-# git submodule update --init --recursive
+# If FTXUI is not in the libs folder, clone https://github.com/ArthurSonzogni/FTXUI inside libs folder. later i will implement git submodule, if its that the case run git submodule update --init --recursive and no need to clone it.
 
 # 2. Create a build directory
 mkdir build && cd build
