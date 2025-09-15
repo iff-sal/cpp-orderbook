@@ -2,7 +2,7 @@
 
 > A command-line application that simulates a real-time, single-instrument order matching engine by replaying historical LOBSTER market data, featuring a dynamic Terminal User Interface (TUI).
 
-This project is a high-performance simulation of a financial exchange's core functionality, built in modern C++. It is designed to demonstrate advanced C++ skills, multithreading, and an understanding of financial market micro-structure.
+This project is a high-performance simulation of a financial exchange's core functionality, built in modern C++.
 
 ![Matching Engine Demo](./assets/matchingengine_demo.gif)
 
