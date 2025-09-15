@@ -42,6 +42,8 @@ private:
 
     std::list<Trade> trades_history;
     double current_timestamp;
+
+    friend class OrderBookTest_FullMatchExecution_Test;
 };
 
 #endif //ORDER_BOOK>H
