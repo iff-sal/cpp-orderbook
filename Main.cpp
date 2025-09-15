@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
             // }
 
             line_count++;
-            if (line_count % 100 == 0) { // play around this with to get smooth ui
+            if (line_count % 100 == 0) { // play around this with to get smooth ui, line_count % 100 == 0
                 ViewModel snapshot = order_book.get_view_model(10);
                 ui_queue.push(snapshot);
                 screen.PostEvent(ftxui::Event::Custom); // wakeup the ui thread
